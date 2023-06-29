@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  nginx:
+    container_name: nginx
+    image: xiaocheng2014/webserver:openresty-1.21.4-1
+    volumes:
+      - ${APP_DIR}/logs/nginx:/opt/bitnami/openresty/nginx/logs:rw
+      - ${APP_DIR}/etc/nginx/certs:/opt/bitnami/openresty/nginx/conf/bitnami/certs:ro
+      - ${APP_DIR}/etc/nginx/http:/opt/bitnami/openresty/nginx/conf/bitnami/http:ro
+      - ${APP_DIR}/etc/nginx/stream:/opt/bitnami/openresty/nginx/conf/bitnami/stream:ro
+    network_mode: host
+    restart: always
