@@ -26,6 +26,8 @@ services:
   mariadb:
     container_name: mariadb
     image: ${MARIADB_IMAGE}
+    ports:
+      - "127.0.0.1:3306:3306"
     environment:
       - MARIADB_ROOT_HOST=127.0.0.1
       - MARIADB_ROOT_PASSWORD=%ryom7W8t@;a|C8XOjg0oS1.z
@@ -37,6 +39,8 @@ services:
   redis:
     container_name: redis
     image: ${REDIS_IMAGE}
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${APP_DIR}/data/redis:/data:rw
