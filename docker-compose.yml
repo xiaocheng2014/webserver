@@ -1,8 +1,8 @@
 version: "3.7"
 services:
-  nginx:
-    container_name: nginx
-    image: xiaocheng2014/webserver:openresty-1.21.4-1
+  openresty:
+    container_name: openresty
+    image: ${OPENRESTY_IMAGE}
     ports:
       - "443:443"
       - "80:80"
@@ -16,7 +16,7 @@ services:
     restart: always
   php-fpm:
     container_name: php-fpm
-    image: xiaocheng2014/webserver:php-fpm-8.2.3
+    image: ${PHP_FPM_IMAGE}
     ports:
       - "127.0.0.1:9000:9000"
     volumes:
@@ -25,7 +25,7 @@ services:
     restart: always
   mariadb:
     container_name: mariadb
-    image: xiaocheng2014/webserver:mariadb-11.0.2
+    image: ${MARIADB_IMAGE}
     environment:
       - MARIADB_ROOT_HOST=127.0.0.1
       - MARIADB_ROOT_PASSWORD=%ryom7W8t@;a|C8XOjg0oS1.z
@@ -36,14 +36,14 @@ services:
     restart: always
   redis:
     container_name: redis
-    image: xiaocheng2014/webserver:redis-7.0.11
+    image: ${REDIS_IMAGE}
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${APP_DIR}/data/redis:/data:rw
       - ${APP_DIR}/etc/redis:/usr/local/etc/redis:rw
   java-web1:
     container_name: java-web1
-    image: xiaocheng2014/webserver:openjdk-8u342-jdk
+    image: ${JDK_IMAGE}
     command: javar -jar /app/app.jar
     volumes:
       - /etc/localtime:/etc/localtime:ro
