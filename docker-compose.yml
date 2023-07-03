@@ -7,17 +7,45 @@ services:
       - "443:443"
       - "80:80"
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${APP_DIR}/logs/nginx:/opt/bitnami/openresty/nginx/logs:rw
       - ${APP_DIR}/etc/nginx/certs:/opt/bitnami/openresty/nginx/conf/bitnami/certs:ro
       - ${APP_DIR}/etc/nginx/http:/opt/bitnami/openresty/nginx/conf/bitnami/http:ro
       - ${APP_DIR}/etc/nginx/stream:/opt/bitnami/openresty/nginx/conf/bitnami/stream:ro
       - ${APP_DIR}/www:/app/www:rw
     restart: always
+  php-fpm:
+    container_name: php-fpm
+    image: xiaocheng2014/webserver:php-fpm-8.2.3
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${APP_DIR}/www:/var/www/html
+    restart: always
+  mariadb:
+    container_name: mariadb
+    image: xiaocheng2014/webserver:mariadb-11.0.2
+    environment:
+      - MARIADB_ROOT_HOST=127.0.0.1
+      - MARIADB_ROOT_PASSWORD=%ryom7W8t@;a|C8XOjg0oS1.z
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${APP_DIR}/data/mysql:/var/lib/mysql:rw
+      - ${APP_DIR}/data/mysql_backup:/backup:rw
+    restart: always
+  redis:
+    container_name: redis
+    image: xiaocheng2014/webserver:redis-7.0.11
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${APP_DIR}/data/redis:/data:rw
+      - ${APP_DIR}/etc/redis:/usr/local/etc/redis:rw
   java-web1:
     container_name: java-web1
     image: xiaocheng2014/webserver:openjdk-8u342-jdk
     command: javar -jar /app/app.jar
-    #volumes:
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     #  - ${APP_DIR}/apps/xxx.jar:/app/app.jar
-    network_mode: host
     restart: always
