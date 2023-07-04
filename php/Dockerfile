@@ -1,5 +1,7 @@
 FROM php:8.2.3-fpm
 
+COPY redis/ /usr/src/php/ext/redis/
+
 RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak \
     && sed -i "s#http://deb.debian.org#https://mirrors.aliyun.com#g" /etc/apt/sources.list \
     && apt-get update --fix-missing \
@@ -11,9 +13,10 @@ RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak \
 		libxslt1-dev \
 		libldap2-dev \
 		libssl-dev \
+        libzip-dev \
     && docker-php-source extract \
 	&& docker-php-ext-configure gd --with-freetype --with-jpeg \
-	&& docker-php-ext-install -j$(nproc) gd xsl ldap sockets \
+	&& docker-php-ext-install -j$(nproc) gd xsl ldap sockets opcache pdo pdo_mysql mysqli zip redis \
 	&& docker-php-source delete \
     && pecl install xdebug && docker-php-ext-enable xdebug
 
