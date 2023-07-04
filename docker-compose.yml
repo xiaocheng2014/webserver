@@ -3,6 +3,7 @@ services:
   openresty:
     container_name: openresty
     image: ${OPENRESTY_IMAGE}
+    user: root
     ports:
       - "443:443"
       - "80:80"
