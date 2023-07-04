@@ -12,7 +12,7 @@ services:
       - ${APP_DIR}/etc/nginx/certs:/opt/bitnami/openresty/nginx/conf/bitnami/certs:ro
       - ${APP_DIR}/etc/nginx/http:/opt/bitnami/openresty/nginx/conf/bitnami/http:ro
       - ${APP_DIR}/etc/nginx/stream:/opt/bitnami/openresty/nginx/conf/bitnami/stream:ro
-      - ${APP_DIR}/www:/app/www:rw
+      - ${APP_DIR}/web:/app/web:rw
     restart: always
   php-fpm:
     container_name: php-fpm
@@ -21,7 +21,7 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${APP_DIR}/www:/var/www/html
+      - ${APP_DIR}/web:/app/web:rw
     restart: always
   mariadb:
     container_name: mariadb
