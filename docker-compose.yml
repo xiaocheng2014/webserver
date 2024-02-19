@@ -1,51 +1,66 @@
 version: "3.7"
-services:
-  openresty:
-    container_name: openresty
-    image: ${OPENRESTY_IMAGE}
-    user: root
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${APP_DIR}/logs/nginx:/opt/bitnami/openresty/nginx/logs:rw
-      - ${APP_DIR}/etc/nginx/certs:/opt/bitnami/openresty/nginx/conf/bitnami/certs:ro
-      - ${APP_DIR}/etc/nginx/http:/opt/bitnami/openresty/nginx/conf/bitnami/http:ro
-      - ${APP_DIR}/etc/nginx/stream:/opt/bitnami/openresty/nginx/conf/bitnami/stream:ro
-      - ${APP_DIR}/web:/app/web:rw
-    restart: always
-  php-fpm:
-    container_name: php-fpm
-    image: ${PHP_FPM_IMAGE}
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${APP_DIR}/web:/app/web:rw
-    restart: always
-  mariadb:
-    container_name: mariadb
-    image: ${MARIADB_IMAGE}
-    environment:
-      - MARIADB_ROOT_HOST=127.0.0.1
-      - MARIADB_ROOT_PASSWORD=%ryom7W8t@;a|C8XOjg0oS1.z
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${APP_DIR}/data/mysql:/var/lib/mysql:rw
-      - ${APP_DIR}/data/mysql_backup:/backup:rw
-    restart: always
-  redis:
-    container_name: redis
-    image: ${REDIS_IMAGE}
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${APP_DIR}/data/redis:/data:rw
-      - ${APP_DIR}/etc/redis:/usr/local/etc/redis:rw
-  java-web1:
-    container_name: java-web1
-    image: ${JDK_IMAGE}
-    command: javar -jar /app/app.jar
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-    #  - ${APP_DIR}/apps/xxx.jar:/app/app.jar
-    restart: always
+# services:
+
+  # openresty-start
+  # openresty:
+  #   container_name: openresty
+  #   image: ${OPENRESTY_IMAGE}
+  #   user: root
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - ${APP_DIR}/logs/nginx:/opt/bitnami/openresty/nginx/logs:rw
+  #     - ${APP_DIR}/etc/nginx/certs:/opt/bitnami/openresty/nginx/conf/bitnami/certs:ro
+  #     - ${APP_DIR}/etc/nginx/http:/opt/bitnami/openresty/nginx/conf/bitnami/http:ro
+  #     - ${APP_DIR}/etc/nginx/stream:/opt/bitnami/openresty/nginx/conf/bitnami/stream:ro
+  #     - ${APP_DIR}/web:/app/web:rw
+  #   restart: always
+  # openresty-end
+
+  # php-fpm-start
+  # php-fpm:
+  #   container_name: php-fpm
+  #   image: ${PHP_FPM_IMAGE}
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - ${APP_DIR}/web:/app/web:rw
+  #   restart: always
+  # php-fpm-end
+
+  # mariadb-start
+  # mariadb:
+  #   container_name: mariadb
+  #   image: ${MARIADB_IMAGE}
+  #   environment:
+  #     - MARIADB_ROOT_HOST=127.0.0.1
+  #     - MARIADB_ROOT_PASSWORD=%ryom7W8t@;a|C8XOjg0oS1.z
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - ${APP_DIR}/data/mysql:/var/lib/mysql:rw
+  #     - ${APP_DIR}/data/mysql_backup:/backup:rw
+  #   restart: always
+  # mariadb-end
+
+  # redis-start
+  # redis:
+  #   container_name: redis
+  #   image: ${REDIS_IMAGE}
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - ${APP_DIR}/data/redis:/data:rw
+  #     - ${APP_DIR}/etc/redis:/usr/local/etc/redis:rw
+  # redis-end
+
+  # java-web-start
+  # java-web:
+  #   container_name: java-web1
+  #   image: ${JDK_IMAGE}
+  #   command: java -jar /app/app.jar
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #   #  - ${APP_DIR}/apps/xxx.jar:/app/app.jar
+  #   restart: always
+  # java-web-end
 

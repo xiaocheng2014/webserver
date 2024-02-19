@@ -1,0 +1,342 @@
+#!/bin/bash
+
+set -e
+
+# 辅助脚本
+# 功能：
+#   1. 初始化
+#   2. 创建代理示例
+#   3. 禁用、启用相关服务
+#   4. 备份恢复配置数据
+
+SUPPORT_BASE_SERVICE=("mariadb" "openresty" "php-fpm" "redis")
+CMD_PATH="$0"
+NGINX_CONF_EXAMPLE_PATH="/opt/bitnami/openresty/nginx/conf/example/"
+
+# 带颜色输出文字
+function colorInfo() {
+  colorStr=$1
+  info=$2
+  eval $(echo $1 | awk -F "zi|di" '{print "zi="$1";di="$2}')
+  ziColor=""
+  diColor=""
+  case $zi in
+  "hei")
+    ziColor="30m"
+    ;;
+  "hong")
+    ziColor="31m"
+    ;;
+  "lv")
+    ziColor="32m"
+    ;;
+  "huang")
+    ziColor="33m"
+    ;;
+  "lan")
+    ziColor="34m"
+    ;;
+  "zi")
+    ziColor="35m"
+    ;;
+  "tianlan")
+    ziColor="36m"
+    ;;
+  "bai")
+    ziColor="37m"
+    ;;
+  *)
+    ziColor=""
+    ;;
+  esac
+
+  case $di in
+  "hei")
+    diColor="40;"
+    ;;
+  "hong")
+    diColor="41;"
+    ;;
+  "lv")
+    diColor="42;"
+    ;;
+  "huang")
+    diColor="43;"
+    ;;
+  "lan")
+    diColor="44;"
+    ;;
+  "zi")
+    diColor="45;"
+    ;;
+  "tianlan")
+    diColor="46;"
+    ;;
+  "bai")
+    diColor="47;"
+    ;;
+  *)
+    diColor=""
+    ;;
+  esac
+
+  if [[ "$ziColor" == "" ]]; then
+    echo $info
+    return 0
+  fi
+
+  str="\033["${diColor}""${ziColor}" "${info}" \033[0m"
+  echo -e ${str}
+}
+
+# 获取当前脚本所在目录
+export_project_root() {
+  local -r script_dir=$(dirname "${CMD_PATH}")
+  cd "${script_dir}"
+  project_root=$(pwd) # use it anywhere below
+  export project_root
+}
+
+export_project_root
+
+# 获取docker-compose命令
+get_docker_compose_cmd() {
+  command -v docker-compose >/dev/null && rc=$? || rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "docker-compose -f ${project_root}/docker-compose.yml"
+  else
+    echo "docker compose -f ${project_root}/docker-compose.yml"
+  fi
+}
+
+# 启动容器
+containers_start() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} start ${containers}"
+}
+
+# 停止容器
+containers_stop() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} stop ${containers}"
+}
+
+# 拉取容器镜像
+containers_pull() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} pull ${containers}"
+}
+
+# 删除容器
+containers_rm() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} rm -f ${containers}"
+}
+
+# 列出容器
+containers_ps() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  other_options=$@
+  eval "${docker_command_cmd} ps ${other_options}"
+}
+
+# 停止容器
+containers_down() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  read -p "This operation will stop the service. Determine whether to continue, [y/N]" confirm
+  case "${confirm}" in
+  "y" | "Y")
+    echo "Now, Shutting down  ${containers}"
+    eval "${docker_command_cmd} down ${containers}"
+    ;;
+  *)
+    echo "You cancelled the operation"
+    ;;
+  esac
+}
+
+# 停止所有容器
+containers_all_down() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  if [ "$1" == "confirm" ]; then
+    echo "Now, Shutting down all services"
+    eval "${docker_command_cmd} down"
+  else
+    read -p "This operation will stop all services. Determine whether to continue, [y/N]" confirm
+    case "${confirm}" in
+    "y" | "Y")
+      echo "Now, Shutting down all services"
+      eval "${docker_command_cmd} down"
+      ;;
+    *)
+      echo "You cancelled the operation"
+      ;;
+    esac
+  fi
+}
+
+# 重启容器
+containers_restart() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} restart ${containers}"
+}
+
+# 更新容器
+containers_update() {
+  docker_command_cmd=$(get_docker_compose_cmd)
+  containers=$@
+  eval "${docker_command_cmd} up -d ${containers}"
+}
+
+# 启动服务删除相关注释
+enable_service() {
+  service="$1"
+  # 设置标志以指示是否处于要处理的文本区域内
+  inside_block=false
+  # 读取输入文件的每一行
+  while IFS= read -r line; do
+    # services: 这个配置需要打开
+    if [[ "$line" == "# services:" ]]; then
+      echo "services:"
+      continue
+    fi
+    # 检查是否找到 "end" 行
+    if [[ "$line" == *"# ${service}-end"* ]]; then
+      inside_block=false
+    fi
+    # 处理处于目标区域内的文本行
+    new_line="$line"
+    if $inside_block; then
+      # 移除以#号开头的文本
+      new_line=$(echo "$line" | sed 's/# //g')
+    fi
+    echo "$new_line"
+    # 检查是否找到 "start" 行
+    if [[ "$line" == *"# ${service}-start"* ]]; then
+      inside_block=true
+    fi
+  done <${project_root}/docker-compose.yml
+}
+
+# 初始化相关服务环境
+initMeth() {
+  # .env.example拷贝为.env，获取APP_DIR，写入APP_DIR
+  if [ -f "${project_root}/.env.example" ] && [ ! -f "${project_root}/.env" ]; then
+    cp -f "${project_root}/.env.example" "${project_root}/.env"
+  fi
+  # 删除构建docker镜像的文件夹
+  find "${project_root}" -type d -name "*_builder" -exec rm -rf {} +
+  # 交互让用户选择需要的服务: 列出可用服务，让用户选择
+  ## 生成服务列表
+  let count=1
+  let str=""
+  for service in "${SUPPORT_BASE_SERVICE[@]}"; do
+    eval "service_${count}=${service}"
+    str="${str}${count}.${service} "
+    count=$((count + 1))
+  done
+  colorInfo "lvzi" "请选择需要构建的的服务，输入序号，多个服务，以逗号隔开（${str}），按回车键确认"
+  # 根据用户的选择，开启相关配置
+  read SERVICE_LIST
+  while [ "${SERVICE_LIST}" = "" ]; do
+    read SERVICE_LIST
+  done
+  OLD_IFS="${IFS}"
+  IFS=","
+  arr=(${SERVICE_LIST})
+  IFS=${OLD_IFS}
+  for c in ${arr[@]}; do
+    eval "service=\${service_${c}"
+    # 将服务的注释删除
+    enable_service "${service}" >"${project_root}/docker-compose.yml.tmp"
+    mv "${project_root}/docker-compose.yml.tmp" "${project_root}/docker-compose.yml"
+  done
+  # 拉取所有镜像
+  containers_pull
+  colorInfo "lvzi" "初始化完成，请自行修改相关配置或导入配置数据，然后执行命令：'${CMD_PATH} update' 启动服务"
+}
+
+# 添加代理服务示例
+addProxyMeth() {
+  colorInfo "lvzi" "请选择需要添加的代理类型（1.应用代理配置 2.应用代理SSL配置 3.），按回车键确认"
+  # 根据用户的选择，开启相关配置
+  read PROXY_TYPE
+  while [ "${SERVICE_LIST}" = "" ]; do
+    read SERVICE_LIST
+  done
+}
+
+showCmd() {
+  case "$1" in
+  start)
+    shift
+    containers_start "$@" # 启动服务
+    ;;
+  restart)
+    shift
+    containers_restart "$@" # 重启服务
+    ;;
+  stop)
+    shift
+    containers_stop "$@" # 停止服务
+    ;;
+  pull)
+    shift
+    containers_pull "$@" # 更新镜像
+    ;;
+  rm)
+    shift
+    containers_rm "$@" # 删除服务
+    ;;
+  update)
+    shift
+    containers_update "$@" # 更新服务
+    ;;
+  down)
+    shift
+    containers_down "$@"
+    ;;
+  all_down)
+    shift
+    containers_all_down "$@"
+    ;;
+  init)
+    initMeth # 初始化
+    ;;
+  # @TODO
+  add_proxy)
+    addProxyMeth # 添加代理示例
+    ;;
+  # @TODO
+  enable)
+    enableServiceMeth $2 # 启用相关服务
+    ;;
+  # @TODO
+  disable)
+    disableServiceMeth $2 # 禁用相关服务
+    ;;
+  # @TODO
+  import)
+    importMeth $2 # 导入覆盖配置数据
+    ;;
+  # @TODO
+  export)
+    exportMeth # 备份打包配置数据
+    ;;
+  # @TODO
+  help)
+    helpMeth # 帮助
+    ;;
+  *)
+    echo -e "Try '${CMD_PATH} help' for more information\n"
+    ;;
+  esac
+}
+
+showCmd "$@"
