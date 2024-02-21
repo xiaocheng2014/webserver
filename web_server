@@ -11,10 +11,10 @@ set -e
 
 SUPPORT_BASE_SERVICE=("mariadb" "openresty" "php-fpm" "redis")
 CMD_PATH="$0"
-NGINX_CONF_EXAMPLE_PATH="/opt/bitnami/openresty/nginx/conf/example/"
+NGINX_CONF_EXAMPLE_PATH="/opt/bitnami/openresty/nginx/conf/example"
 
 # 带颜色输出文字
-function colorInfo() {
+colorInfo() {
   colorStr=$1
   info=$2
   eval $(echo $1 | awk -F "zi|di" '{print "zi="$1";di="$2}')
@@ -85,8 +85,17 @@ function colorInfo() {
     return 0
   fi
 
-  str="\033["${diColor}""${ziColor}" "${info}" \033[0m"
+  str="\033["${diColor}""${ziColor}""${info}"\033[0m"
   echo -e ${str}
+}
+
+# 检测工具是否存在
+check_command() {
+  if command -v "$1" >/dev/null; then
+    echo "y"
+  else
+    echo "n"
+  fi
 }
 
 # 获取当前脚本所在目录
@@ -101,11 +110,13 @@ export_project_root
 
 # 获取docker-compose命令
 get_docker_compose_cmd() {
+  # 获取docker-compose下的所有配置文件
+  all_yml_conf_cmd=$(find "${project_root}" -type f -name "[^.]*.yml" | awk '{printf(" -f %s ", $0)}')
   command -v docker-compose >/dev/null && rc=$? || rc=$?
   if [ $rc -ne 0 ]; then
-    echo "docker-compose -f ${project_root}/docker-compose.yml"
+    echo "docker compose ${all_yml_conf_cmd}"
   else
-    echo "docker compose -f ${project_root}/docker-compose.yml"
+    echo "docker-compose ${all_yml_conf_cmd}"
   fi
 }
 
@@ -224,6 +235,31 @@ enable_service() {
   done <${project_root}/docker-compose.yml
 }
 
+# 禁用服务添加相关注释
+disable_service() {
+  service="$1"
+  # 设置标志以指示是否处于要处理的文本区域内
+  inside_block=false
+  # 读取输入文件的每一行
+  while IFS= read -r line; do
+    # 检查是否找到 "end" 行
+    if [[ "$line" == *"# ${service}-end"* ]]; then
+      inside_block=false
+    fi
+    # 处理处于目标区域内的文本行
+    new_line="$line"
+    if $inside_block; then
+      # 添加'# '到行首
+      new_line="# $line"
+    fi
+    echo "$new_line"
+    # 检查是否找到 "start" 行
+    if [[ "$line" == *"# ${service}-start"* ]]; then
+      inside_block=true
+    fi
+  done <${project_root}/docker-compose.yml
+}
+
 # 初始化相关服务环境
 initMeth() {
   # .env.example拷贝为.env，获取APP_DIR，写入APP_DIR
@@ -241,7 +277,7 @@ initMeth() {
     str="${str}${count}.${service} "
     count=$((count + 1))
   done
-  colorInfo "lvzi" "请选择需要构建的的服务，输入序号，多个服务，以逗号隔开（${str}），按回车键确认"
+  colorInfo "lvzi" "请选择需要构建的服务，输入序号，多个服务，以逗号隔开（${str}），按回车键确认"
   # 根据用户的选择，开启相关配置
   read SERVICE_LIST
   while [ "${SERVICE_LIST}" = "" ]; do
@@ -264,12 +300,191 @@ initMeth() {
 
 # 添加代理服务示例
 addProxyMeth() {
-  colorInfo "lvzi" "请选择需要添加的代理类型（1.应用代理配置 2.应用代理SSL配置 3.），按回车键确认"
+  colorInfo "lvzi" "请选择需要添加的代理类型（1.应用代理配置 2.应用代理SSL配置 3.资源代理配置 4.资源代理SSL配置），输入序号，按回车键确认"
   # 根据用户的选择，开启相关配置
   read PROXY_TYPE
-  while [ "${SERVICE_LIST}" = "" ]; do
-    read SERVICE_LIST
+  while [ -z "${PROXY_TYPE}" ] || [ "${PROXY_TYPE}" != "1" ] && [ "${PROXY_TYPE}" != "2" ] && [ "${PROXY_TYPE}" != "3" ] && [ "${PROXY_TYPE}" != "4" ]; do
+    colorInfo "hongzi" "输入错误，不正确的序号，请重新输入"
+    read PROXY_TYPE
   done
+  read -p "请输入配置名称" PROXY_NAME
+  while [ -z "${PROXY_NAME}" ]; do
+    colorInfo "hongzi" "配置名称不能为空，请重新输入"
+    read PROXY_NAME
+  done
+  case "${PROXY_TYPE}" in
+  "1")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/proxy.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/proxy.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  "2")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/ssl_proxy.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/ssl_proxy.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  "3")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/web.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/web.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  "4")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/ssl_web.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/ssl_web.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  esac
+}
+
+# 启动某个服务
+enableServiceMeth() {
+  # 交互让用户选择需要的服务: 列出可用服务，让用户选择
+  ## 生成服务列表
+  let count=1
+  let str=""
+  for service in "${SUPPORT_BASE_SERVICE[@]}"; do
+    eval "service_${count}=${service}"
+    str="${str}${count}.${service} "
+    count=$((count + 1))
+  done
+  colorInfo "lvzi" "请选择需要构建的服务，输入序号（${str}），按回车键确认"
+  # 根据用户的选择，开启相关配置
+  read SERVICE_NUM
+  eval "service=\${service_${SERVICE_NUM}"
+  while [ "${service}" = "" ]; do
+    colorInfo "hongzi" "输入错误，不正确的序号，请重新输入"
+    read SERVICE_NUM
+    eval "service=\${service_${SERVICE_NUM}"
+  done
+  enable_service "${service}" >"${project_root}/docker-compose.yml.tmp"
+  mv "${project_root}/docker-compose.yml.tmp" "${project_root}/docker-compose.yml"
+  # 拉取所有镜像
+  containers_pull ${service}
+  containers_update ${service}
+  colorInfo "lvzi" "${service}服务已启动"
+}
+
+# 停止禁用某个服务
+disableServiceMeth() {
+  # 交互让用户选择需要的服务: 列出可用服务，让用户选择
+  ## 生成服务列表
+  let count=1
+  let str=""
+  for service in "${SUPPORT_BASE_SERVICE[@]}"; do
+    eval "service_${count}=${service}"
+    str="${str}${count}.${service} "
+    count=$((count + 1))
+  done
+  colorInfo "lvzi" "请选择需要的关闭的服务，输入序号（${str}），按回车键确认"
+  # 根据用户的选择，开启相关配置
+  read SERVICE_NUM
+  eval "service=\${service_${SERVICE_NUM}"
+  while [ "${service}" = "" ]; do
+    colorInfo "hongzi" "输入错误，不正确的序号，请重新输入"
+    read SERVICE_NUM
+    eval "service=\${service_${SERVICE_NUM}"
+  done
+  disable_service "${service}" >"${project_root}/docker-compose.yml.tmp"
+  mv "${project_root}/docker-compose.yml.tmp" "${project_root}/docker-compose.yml"
+  # 判断是否有启动该服务容器，有则关闭，没有则不关
+  docker ps -a | grep ${service} >/dev/null && rc=$? || rc=$?
+  if [ $rc -eq 0 ]; then
+    # 停止服务
+    containers_down ${service}
+  fi
+  colorInfo "lvzi" "${service}服务已关闭"
+}
+
+# 导出配置数据
+exportMeth() {
+  # 交互提示导出配置数据时，最好先暂停所有服务
+  STOP_ALL=""
+  while [ "${STOP_ALL}" != "y" ] && [ "${STOP_ALL}" != "n" ]; do
+    read -p "导出配置数据需要暂停所有服务，是否继续？[y/n]" STOP_ALL
+    STOP_ALL=$(echo ${STOP_ALL} | tr '[:upper:]' '[:lower:]')
+  done
+  if [ "${STOP_ALL}" = "n" ]; then
+    colorInfo "hongzi" "您取消了导出操作"
+    exit 0
+  fi
+  # 检查是否有zip命令
+  exist_tar=$(check_command zip)
+  if [ "${exist_tar}" = "n" ]; then
+    colorInfo "hongzi" "导出备份包使用zip命令，请先安装zip命令"
+    exit 0
+  fi
+  read -p "请输入导出备份包的密码：" EXPORT_PASSWD
+  # 暂停所有服务
+  containers_stop
+  cd ${project_root}
+  backup_name="web-server-$(date +'%Y%m%d%H').backup"
+  if [ "${EXPORT_PASSWD}" = "" ]; then
+    zip -er ${backup_name} data etc web
+  else
+    zip -er -P ${EXPORT_PASSWD} ${backup_name} data etc web
+  fi
+  cd -
+  colorInfo "lvzi" "导出备份包成功，备份包路径为：${project_root}/${backup_name}"
+  # 启动所有服务
+  containers_start
+}
+
+# 导入覆盖配置数据
+importMeth() {
+  # 交互提示导入覆盖配置数据时，最好先暂停所有服务
+  STOP_ALL=""
+  while [ "${STOP_ALL}" != "y" ] && [ "${STOP_ALL}" != "n" ]; do
+    read -p "导入覆盖配置数据需要暂停所有服务，是否继续？[y/n]" STOP_ALL
+    STOP_ALL=$(echo ${STOP_ALL} | tr '[:upper:]' '[:lower:]')
+  done
+  if [ "${STOP_ALL}" = "n" ]; then
+    colorInfo "hongzi" "您取消了导入操作"
+    exit 0
+  fi
+  # 检查是否有unzip命令
+  exist_tar=$(check_command unzip)
+  if [ "${exist_tar}" = "n" ]; then
+    colorInfo "hongzi" "导入备份包使用unzip命令，请先安装unzip命令"
+    exit 0
+  fi
+  read -p "请输入备份包磁盘路径：" IMPORT_BACKUP_PATH
+  if [ ! -f "${IMPORT_BACKUP_PATH}" ]; then
+    colorInfo "hongzi" "备份包不存在，请检查路径是否正确"
+    exit 1
+  fi
+  read -p "请输入导入备份包的密码：" IMPORT_PASSWD
+  # 暂停所有服务
+  containers_stop
+  rm -rf ${project_root}/backup && mkdir -p ${project_root}/backup
+  mv ${project_root}/data ${project_root}/backup/
+  mv ${project_root}/web ${project_root}/backup/
+  mv ${project_root}/etc ${project_root}/backup/
+  if [ "${IMPORT_PASSWD}" = "" ]; then
+    unzip ${IMPORT_BACKUP_PATH} -d ${project_root}
+  else
+    unzip -P ${IMPORT_PASSWD} ${IMPORT_BACKUP_PATH} -d ${project_root}
+  fi
+  # 启动所有服务
+  containers_start
+  colorInfo "lvzi" "导入备份包成功"
+}
+
+helpMeth() {
+  echo "Usage: ${CMD_PATH} [init|start|restart|stop|pull|rm|update|down|all_down|add_proxy|enable|disable|export|import]"
+  echo -e "$(printf '%-20s' 'init')\t\t\t=>\t\t初始化web server，根据交互提示操作，不启动服务，只会初始化相关服务"
+  echo -e "$(printf '%-20s' 'start [containerName]')\t\t\t=>\t\t启动容器，即：docker-compose -f xxx start [containerName]"
+  echo -e "$(printf '%-20s' 'restart [containerName]')\t\t\t=>\t\t重启容器，即：docker-compose -f xxx restart [containerName]"
+  echo -e "$(printf '%-20s' 'stop [containerName]')\t\t\t=>\t\t停止容器，即：docker-compose -f xxx stop [containerName]"
+  echo -e "$(printf '%-20s' 'pull [containerName]')\t\t\t=>\t\t更新容器镜像，即：docker-compose -f xxx pull [containerName]"
+  echo -e "$(printf '%-20s' 'rm [containerName]')\t\t\t=>\t\t删除容器，即：docker-compose -f xxx rm -f [containerName]"
+  echo -e "$(printf '%-20s' 'update [containerName]')\t\t\t=>\t\t更新容器，即：docker-compose -f xxx up -d [containerName]"
+  echo -e "$(printf '%-20s' 'down [containerName]')\t\t\t=>\t\t停止删除容器，即：docker-compose -f xxx down [containerName]"
+  echo -e "$(printf '%-20s' 'all_down')\t\t\t=>\t\t停止删除所有容器，即：docker-compose -f xxx down"
+  echo -e "$(printf '%-20s' 'add_proxy')\t\t\t=>\t\t添加代理配置示例，根据交互提示操作"
+  echo -e "$(printf '%-20s' 'enable')\t\t\t=>\t\t启动服务，根据交互提示操作"
+  echo -e "$(printf '%-20s' 'disable')\t\t\t=>\t\t停止禁用服务，根据交互提示操作"
+  echo -e "$(printf '%-20s' 'export')\t\t\t=>\t\t导出配置数据，根据交互提示操作"
+  echo -e "$(printf '%-20s' 'import')\t\t\t=>\t\t导入配置数据，根据交互提示操作"
 }
 
 showCmd() {
@@ -309,27 +524,21 @@ showCmd() {
   init)
     initMeth # 初始化
     ;;
-  # @TODO
   add_proxy)
     addProxyMeth # 添加代理示例
     ;;
-  # @TODO
   enable)
-    enableServiceMeth $2 # 启用相关服务
+    enableServiceMeth # 启用相关服务
     ;;
-  # @TODO
   disable)
     disableServiceMeth $2 # 禁用相关服务
     ;;
-  # @TODO
   import)
-    importMeth $2 # 导入覆盖配置数据
+    importMeth # 导入覆盖配置数据
     ;;
-  # @TODO
   export)
     exportMeth # 备份打包配置数据
     ;;
-  # @TODO
   help)
     helpMeth # 帮助
     ;;
