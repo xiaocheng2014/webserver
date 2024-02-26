@@ -265,13 +265,14 @@ initMeth() {
   # .env.example拷贝为.env，获取APP_DIR，写入APP_DIR
   if [ -f "${project_root}/.env.example" ] && [ ! -f "${project_root}/.env" ]; then
     cp -f "${project_root}/.env.example" "${project_root}/.env"
+    sed -i "s|APP_DIR=.*|APP_DIR=${project_root}|" "${project_root}.env"
   fi
   # 删除构建docker镜像的文件夹
   find "${project_root}" -type d -name "*_builder" -exec rm -rf {} +
   # 交互让用户选择需要的服务: 列出可用服务，让用户选择
   ## 生成服务列表
-  let count=1
-  let str=""
+  local count=1
+  local str=""
   for service in "${SUPPORT_BASE_SERVICE[@]}"; do
     eval "service_${count}=${service}"
     str="${str}${count}.${service} "
@@ -288,7 +289,7 @@ initMeth() {
   arr=(${SERVICE_LIST})
   IFS=${OLD_IFS}
   for c in ${arr[@]}; do
-    eval "service=\${service_${c}"
+    eval "service=\${service_${c}}"
     # 将服务的注释删除
     enable_service "${service}" >"${project_root}/docker-compose.yml.tmp"
     mv "${project_root}/docker-compose.yml.tmp" "${project_root}/docker-compose.yml"
@@ -340,8 +341,8 @@ addProxyMeth() {
 enableServiceMeth() {
   # 交互让用户选择需要的服务: 列出可用服务，让用户选择
   ## 生成服务列表
-  let count=1
-  let str=""
+  local count=1
+  local str=""
   for service in "${SUPPORT_BASE_SERVICE[@]}"; do
     eval "service_${count}=${service}"
     str="${str}${count}.${service} "
@@ -368,8 +369,8 @@ enableServiceMeth() {
 disableServiceMeth() {
   # 交互让用户选择需要的服务: 列出可用服务，让用户选择
   ## 生成服务列表
-  let count=1
-  let str=""
+  local count=1
+  local str=""
   for service in "${SUPPORT_BASE_SERVICE[@]}"; do
     eval "service_${count}=${service}"
     str="${str}${count}.${service} "
