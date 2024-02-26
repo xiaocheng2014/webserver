@@ -265,7 +265,7 @@ initMeth() {
   # .env.example拷贝为.env，获取APP_DIR，写入APP_DIR
   if [ -f "${project_root}/.env.example" ] && [ ! -f "${project_root}/.env" ]; then
     cp -f "${project_root}/.env.example" "${project_root}/.env"
-    sed -i "s|APP_DIR=.*|APP_DIR=${project_root}|" "${project_root}.env"
+    sed -i "s|APP_DIR=.*|APP_DIR=${project_root}|" "${project_root}/.env"
   fi
   # 删除构建docker镜像的文件夹
   find "${project_root}" -type d -name "*_builder" -exec rm -rf {} +
