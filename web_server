@@ -301,7 +301,7 @@ initMeth() {
 
 # 添加代理服务示例
 addProxyMeth() {
-  colorInfo "lvzi" "请选择需要添加的代理类型（1.应用代理配置 2.应用代理SSL配置 3.资源代理配置 4.资源代理SSL配置），输入序号，按回车键确认"
+  colorInfo "lvzi" "请选择需要添加的代理类型（1.应用代理配置 2.应用代理SSL配置 3.资源代理配置 4.资源代理SSL配置 5.应用代理且开启双向认证SSL配置 6.资源代理且开启双向认证SSL配置），输入序号，按回车键确认"
   # 根据用户的选择，开启相关配置
   read PROXY_TYPE
   while [ -z "${PROXY_TYPE}" ] || [ "${PROXY_TYPE}" != "1" ] && [ "${PROXY_TYPE}" != "2" ] && [ "${PROXY_TYPE}" != "3" ] && [ "${PROXY_TYPE}" != "4" ]; do
@@ -332,6 +332,16 @@ addProxyMeth() {
   "4")
     docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/ssl_web.conf ${project_root}/etc/nginx/http/
     mv ${project_root}/etc/nginx/http/ssl_web.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  "5")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/ssl_proxy_verify_client.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/ssl_proxy_verify_client.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
+    colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
+    ;;
+  "6")
+    docker cp openresty:${NGINX_CONF_EXAMPLE_PATH}/ssl_web_verify_client.conf ${project_root}/etc/nginx/http/
+    mv ${project_root}/etc/nginx/http/ssl_web_verify_client.conf ${project_root}/etc/nginx/http/${PROXY_NAME}.conf
     colorInfo "lvzi" "示例代理配置已经添加，路径：${project_root}/etc/nginx/http/${PROXY_NAME}.conf，请自行修改相关配置，并重新启动openresty服务"
     ;;
   esac
