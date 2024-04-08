@@ -45,7 +45,7 @@ merge_java:
 merge_mariadb:
 	docker pull xiaocheng2014/webserver:mariadb-11.0.2; \
 	docker pull xiaocheng2014/webserver:mariadb-11.0.2-arm64; \
-	docker manifest create xiaocheng2014/webserver:mariadb-11.0.2-jdk  \
+	docker manifest create xiaocheng2014/webserver:mariadb-11.0.2  \
                            xiaocheng2014/webserver:mariadb-11.0.2-amd64 \
                            xiaocheng2014/webserver:mariadb-11.0.2-arm64 --amend; \
     docker manifest push xiaocheng2014/webserver:mariadb-11.0.2
