@@ -21,8 +21,11 @@ push_openresty:
 	docker push xiaocheng2014/webserver:openresty-1.21.4-1-$(ARCH)
 
 build_php:
-	cd php_builer; \
+	cd php_builder; \
 	docker build . -t xiaocheng2014/webserver:php-fpm-8.2.3-$(ARCH)
+
+push_php:
+	docker push xiaocheng2014/webserver:php-fpm-8.2.3-$(ARCH)
 
 build_redis:
 	cd redis_builder; \
