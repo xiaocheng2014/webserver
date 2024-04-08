@@ -1,35 +1,35 @@
 ARCH ?= amd64
 build_java:
 	cd java_builder; \
-	docker build . -t xiaocheng2014/webserver:openjdk-8u342-jdk-$(ARCH)
+	docker build . -t xiaocheng2014/webserver:openjdk-8u342-jdk-$(ARCH) --no-cache
 
 push_java:
 	docker push xiaocheng2014/webserver:openjdk-8u342-jdk-$(ARCH)
 
 build_mariadb:
 	cd mariadb_builder; \
-	docker build . -t xiaocheng2014/webserver:mariadb-11.0.2-$(ARCH)
+	docker build . -t xiaocheng2014/webserver:mariadb-11.0.2-$(ARCH) --no-cache
 
 push_mariadb:
 	docker push xiaocheng2014/webserver:mariadb-11.0.2-$(ARCH)
 
 build_openresty:
 	cd openresty_builder; \
-	docker build . -t xiaocheng2014/webserver:openresty-1.21.4-1-$(ARCH)
+	docker build . -t xiaocheng2014/webserver:openresty-1.21.4-1-$(ARCH) --no-cache
 
 push_openresty:
 	docker push xiaocheng2014/webserver:openresty-1.21.4-1-$(ARCH)
 
 build_php:
 	cd php_builder; \
-	docker build . -t xiaocheng2014/webserver:php-fpm-8.2.3-$(ARCH)
+	docker build . -t xiaocheng2014/webserver:php-fpm-8.2.3-$(ARCH) --no-cache
 
 push_php:
 	docker push xiaocheng2014/webserver:php-fpm-8.2.3-$(ARCH)
 
 build_redis:
 	cd redis_builder; \
-	docker build . -t xiaocheng2014/webserver:redis-7.0.11-$(ARCH)
+	docker build . -t xiaocheng2014/webserver:redis-7.0.11-$(ARCH) --no-cache
 
 push_redis:
 	docker push xiaocheng2014/webserver:redis-7.0.11-$(ARCH)
